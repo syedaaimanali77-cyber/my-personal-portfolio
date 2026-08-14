@@ -537,7 +537,7 @@ export default function Page() {
         ))}
       </h1>
             <div className="hero__rule" />
-            <p className="hero__hook">I turn mathematics into software people can actually <em>use</em>.</p>
+            <p className="hero__hook">I turned mathematics into software people can actually <em>use</em>.</p>
             <div className="hero__cta">
               <a className="btn btn--primary" href="#contact">Start a conversation
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
