@@ -43,8 +43,17 @@ const CERTIFICATIONS = [
   },
   {
     title: "AI Automation",
+    org: "Pinnacloid Institute",
     status: "Completed",
-    // org / when / credential / text / tags: awaiting confirmed details.
+    text: "Practical AI skills focused on prompting, AI tools, and business applications.",
+    tags: [
+      "ai prompting",
+      "prompt engineering",
+      "claude code",
+      "docker",
+      "ai-assisted development",
+      "workflow automation",
+    ],
   },
 ];
 
@@ -606,7 +615,6 @@ export default function Page() {
         ))}
       </h1>
             <div className="hero__rule" />
-            <p className="hero__hook">I turned mathematics into software people can actually <em>use</em>.</p>
             <div className="hero__cta">
               <a className="btn btn--primary" href="#contact">Start a conversation
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
@@ -767,7 +775,6 @@ export default function Page() {
           <div className="rv">
             <p className="clause">§ Education</p>
             <h2 className="h2">The <em>route</em> so far.</h2>
-            <p className="hook">Theory first, then the tools, then the room.</p>
           </div>
           <div className="tline">
             <article className="tl tl--live rv" data-d="1">
@@ -794,17 +801,24 @@ export default function Page() {
           <div className="rv">
             <p className="clause">§ Courses &amp; Certifications</p>
             <h2 className="h2">Training, and what it <em>covered</em>.</h2>
-            <p className="hook">Completed programmes, not a list of tutorials.</p>
           </div>
           <div className="certs">
             {CERTIFICATIONS.map((c, i) => (
               <article className="cert rv" data-d={(i % 2) + 1} key={c.title}>
                 <div className="cert__meta">
-                  <span className="cert__chip">{c.status}</span>
+                  {c.status ? (
+                    <span className="cert__chip">{c.status}</span>
+                  ) : null}
                   {c.when ? <span className="cert__when">{c.when}</span> : null}
                 </div>
                 <h3 className="cert__title">{c.title}</h3>
-                {c.org ? <p className="cert__org">{c.org}</p> : null}
+                {c.program || c.org ? (
+                  <p className="cert__org">
+                    {c.program}
+                    {c.program && c.org ? <br /> : null}
+                    {c.org}
+                  </p>
+                ) : null}
                 {c.text ? <p className="cert__text">{c.text}</p> : null}
                 {c.credential ? (
                   <p className="cert__cred">Credential {c.credential}</p>
