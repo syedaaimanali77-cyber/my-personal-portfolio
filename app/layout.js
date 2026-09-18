@@ -25,15 +25,42 @@ const mono = IBM_Plex_Mono({
   variable: "--font-mono",
 });
 
+/* Set NEXT_PUBLIC_SITE_URL to the deployed origin (e.g. https://example.com)
+   to turn on absolute canonical/Open Graph URLs. Left unset, Next.js emits
+   relative metadata rather than a guessed domain, and app/sitemap.js and
+   app/robots.js can be added later against the same value. */
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL;
+
+const TITLE = "Syeda Aiman Raza | Portfolio";
+const DESCRIPTION =
+  "Portfolio of Syeda Aiman Raza, a BS Computational Mathematics in AI student " +
+  "in Lahore, Pakistan, working in full-stack web development, AI automation, " +
+  "logo design and video editing.";
+
 export const metadata = {
-  title: "Syeda Aiman Raza — Full-Stack Developer & AI Automation",
-  description:
-    "Syeda Aiman Raza — computational mathematics in AI, full-stack web development, AI automation, logo design and video editing. Lahore, Pakistan.",
+  ...(SITE_URL ? { metadataBase: new URL(SITE_URL) } : {}),
+  title: TITLE,
+  description: DESCRIPTION,
+  applicationName: TITLE,
+  authors: [{ name: "Syeda Aiman Raza" }],
+  creator: "Syeda Aiman Raza",
+  alternates: { canonical: "/" },
   openGraph: {
-    title: "Syeda Aiman Raza — Full-Stack Developer & AI Automation",
-    description:
-      "Mathematics at the back, craft at the front. Full-stack development, AI automation, logo design, video editing.",
-    type: "website",
+    title: TITLE,
+    description: DESCRIPTION,
+    siteName: TITLE,
+    locale: "en_US",
+    type: "profile",
+    ...(SITE_URL ? { url: SITE_URL } : {}),
+  },
+  twitter: {
+    card: "summary",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
   icons: {
     icon:

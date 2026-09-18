@@ -30,6 +30,24 @@ const LANGUAGES = [
 
 const CEFR = ["A1", "A2", "B1", "B2", "C1", "Native"];
 
+/* Courses and certifications. Every field except `title` and `status` is
+   optional: anything left undefined is simply not rendered, so a course with
+   details still to confirm ships without placeholder text on the page. */
+const CERTIFICATIONS = [
+  {
+    title: "Full-Stack Web Development",
+    org: "Arfa Kareem Tower",
+    status: "Completed",
+    text: "Applied training across the stack: building interfaces, wiring up services and shipping the result to a live URL.",
+    tags: ["frontend", "backend", "apis", "deploy"],
+  },
+  {
+    title: "AI Automation",
+    status: "Completed",
+    // org / when / credential / text / tags: awaiting confirmed details.
+  },
+];
+
 const CURVE_ROWS = 15;
 const CURVE_COLS = 60;
 const CURVE_W = 1200;
@@ -76,9 +94,15 @@ export default function Page() {
   /* ─── state ─── */
   const [theme, setTheme] = useState("light");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", message: "" });
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    subject: "",
+    message: "",
+  });
   const [errors, setErrors] = useState({});
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState({ kind: "", text: "" });
+  const [sending, setSending] = useState(false);
   const [year, setYear] = useState(2026);
 
   const lines = useMemo(heroChars, []);
@@ -321,33 +345,66 @@ export default function Page() {
     return () => cleanups.forEach((fn) => fn());
   }, []);
 
-  /* ─── contact form → mailto ─── */
+  /* ─── contact form → POST /api/contact ─── */
   const onField = (key) => (e) => {
     const { value } = e.target;
     setForm((f) => ({ ...f, [key]: value }));
     setErrors((prev) => (prev[key] ? { ...prev, [key]: false } : prev));
   };
 
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
+    if (sending) return; /* guard against a double submit */
+
     const name = form.name.trim();
     const email = form.email.trim();
+    const subject = form.subject.trim();
     const message = form.message.trim();
     const next = {
       name: name.length < 2,
       email: !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email),
+      subject: subject.length < 2,
       message: message.length < 10,
     };
     setErrors(next);
-    if (next.name || next.email || next.message) {
-      setStatus("");
+    if (next.name || next.email || next.subject || next.message) {
+      setStatus({ kind: "", text: "" });
       return;
     }
-    const body = `${message}\n\n—\n${name}\n${email}`;
-    window.location.href = `mailto:${EMAIL}?subject=${encodeURIComponent(
-      `Portfolio enquiry from ${name}`
-    )}&body=${encodeURIComponent(body)}`;
-    setStatus("Opening your mail app — press send there to finish.");
+
+    setSending(true);
+    setStatus({ kind: "", text: "Sending your message…" });
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, subject, message }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.ok) {
+        setForm({ name: "", email: "", subject: "", message: "" });
+        setStatus({
+          kind: "ok",
+          text: "Message sent successfully. I'll get back to you as soon as possible.",
+        });
+      } else {
+        if (data.errors) setErrors(data.errors);
+        setStatus({
+          kind: "error",
+          text:
+            data.message ||
+            "The message couldn't be sent just now. Please try again.",
+        });
+      }
+    } catch {
+      setStatus({
+        kind: "error",
+        text: "No connection to the server. Please check your network and try again.",
+      });
+    } finally {
+      setSending(false);
+    }
   };
 
   const tickerSet = (copy) => (
@@ -426,9 +483,20 @@ export default function Page() {
       </li>
           <li>
         <a
-          href="#recognition"
+          href="#certifications"
           ref={(el) => {
             navLinkRefs.current[4] = el;
+          }}
+          onClick={() => setMenuOpen(false)}
+        >
+          Courses
+        </a>
+      </li>
+          <li>
+        <a
+          href="#recognition"
+          ref={(el) => {
+            navLinkRefs.current[5] = el;
           }}
           onClick={() => setMenuOpen(false)}
         >
@@ -439,7 +507,7 @@ export default function Page() {
         <a
           href="#connect"
           ref={(el) => {
-            navLinkRefs.current[5] = el;
+            navLinkRefs.current[6] = el;
           }}
           onClick={() => setMenuOpen(false)}
         >
@@ -450,7 +518,7 @@ export default function Page() {
         <a
           href="#contact"
           ref={(el) => {
-            navLinkRefs.current[6] = el;
+            navLinkRefs.current[7] = el;
           }}
           onClick={() => setMenuOpen(false)}
         >
@@ -508,7 +576,7 @@ export default function Page() {
           <div>
             <span className="hero__tag"><i />Lahore, Pakistan — open to work</span>
             <h1 className="hero__name" aria-label="Syeda Aiman Raza">
-        {lines.map((line) => (
+        {lines.map((line, li) => (
           <span className="ln" key={line.key}>
             {line.nodes.map((node) =>
               node.type === "space" ? (
@@ -533,6 +601,7 @@ export default function Page() {
                 </span>
               )
             )}
+            {li < lines.length - 1 ? " " : null}
           </span>
         ))}
       </h1>
@@ -608,7 +677,7 @@ export default function Page() {
             <p className="hook">Depth over a long list.</p>
           </div>
           <div className="bento" ref={bentoRef}>
-            <article className="bcard rv" data-d="1" tabindex="0">
+            <article className="bcard rv" data-d="1" tabIndex={0}>
               <span className="bcard__ix">01</span>
               <div className="bcard__ico"><svg viewBox="0 0 24 24"><path d="M8 17l-5-5 5-5M16 7l5 5-5 5M13.5 4l-3 16"/></svg></div>
               <div className="bcard__body">
@@ -617,7 +686,7 @@ export default function Page() {
               </div>
               <ul className="bcard__tags"><li>frontend</li><li>backend</li><li>apis</li><li>deploy</li></ul>
             </article>
-            <article className="bcard rv" data-d="2" tabindex="0">
+            <article className="bcard rv" data-d="2" tabIndex={0}>
               <span className="bcard__ix">02</span>
               <div className="bcard__ico"><svg viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M4.2 7.5l2.6 1.5M17.2 15l2.6 1.5M4.2 16.5l2.6-1.5M17.2 9l2.6-1.5"/><circle cx="12" cy="12" r="3.4"/></svg></div>
               <div className="bcard__body">
@@ -626,7 +695,7 @@ export default function Page() {
               </div>
               <ul className="bcard__tags"><li>llms</li><li>workflows</li><li>scripting</li></ul>
             </article>
-            <article className="bcard rv" data-d="1" tabindex="0">
+            <article className="bcard rv" data-d="1" tabIndex={0}>
               <span className="bcard__ix">03</span>
               <div className="bcard__ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17M3.5 12h17" opacity=".45"/><circle cx="12" cy="12" r="3.2"/></svg></div>
               <div className="bcard__body">
@@ -635,7 +704,7 @@ export default function Page() {
               </div>
               <ul className="bcard__tags"><li>identity</li><li>vector</li><li>grids</li></ul>
             </article>
-            <article className="bcard rv" data-d="2" tabindex="0">
+            <article className="bcard rv" data-d="2" tabIndex={0}>
               <span className="bcard__ix">04</span>
               <div className="bcard__ico"><svg viewBox="0 0 24 24"><rect x="2.5" y="5.5" width="14" height="13" rx="2.5"/><path d="M16.5 10.5l5-3v9l-5-3z"/></svg></div>
               <div className="bcard__body">
@@ -710,18 +779,45 @@ export default function Page() {
             </article>
             <article className="tl tl--done rv" data-d="2">
               <span className="tl__dot" />
-              <div className="tl__meta"><span className="tl__when">Certification</span><span className="tl__chip">Completed</span></div>
-              <h3 className="tl__title">Full-Stack Web Development</h3>
-              <p className="tl__org">Arfa Kareem Tower</p>
-              <p className="tl__text">Applied training across the stack: building interfaces, wiring up services and shipping the result to a live URL.</p>
-            </article>
-            <article className="tl tl--done rv" data-d="3">
-              <span className="tl__dot" />
               <div className="tl__meta"><span className="tl__when">Alongside</span><span className="tl__chip">Delegate</span></div>
               <h3 className="tl__title">Model United Nations</h3>
               <p className="tl__org">Multiple conferences</p>
               <p className="tl__text">Research, position papers and live debate — the habit of defending a decision with evidence, quickly and in public.</p>
             </article>
+          </div>
+        </div>
+      </section>
+
+      {/* ========= COURSES & CERTIFICATIONS ========= */}
+      <section className="sec" id="certifications">
+        <div className="wrap">
+          <div className="rv">
+            <p className="clause">§ Courses &amp; Certifications</p>
+            <h2 className="h2">Training, and what it <em>covered</em>.</h2>
+            <p className="hook">Completed programmes, not a list of tutorials.</p>
+          </div>
+          <div className="certs">
+            {CERTIFICATIONS.map((c, i) => (
+              <article className="cert rv" data-d={(i % 2) + 1} key={c.title}>
+                <div className="cert__meta">
+                  <span className="cert__chip">{c.status}</span>
+                  {c.when ? <span className="cert__when">{c.when}</span> : null}
+                </div>
+                <h3 className="cert__title">{c.title}</h3>
+                {c.org ? <p className="cert__org">{c.org}</p> : null}
+                {c.text ? <p className="cert__text">{c.text}</p> : null}
+                {c.credential ? (
+                  <p className="cert__cred">Credential {c.credential}</p>
+                ) : null}
+                {c.tags ? (
+                  <ul className="cert__tags">
+                    {c.tags.map((t) => (
+                      <li key={t}>{t}</li>
+                    ))}
+                  </ul>
+                ) : null}
+              </article>
+            ))}
           </div>
         </div>
       </section>
@@ -785,9 +881,9 @@ export default function Page() {
             <h2 className="h2">Tell me what you're <em>building</em>.</h2>
             <p className="hook">Internships, freelance work, or a problem worth solving.</p>
             <div className="direct">
-              <a href="mailto:syedaaimanali77@gmail.com">
+              <a href={`mailto:${EMAIL}`}>
                 <svg viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="2.5" y="4.5" width="19" height="15" rx="2"/><path d="M3 6l9 6 9-6"/></svg>
-                syedaaimanali77@gmail.com
+                {EMAIL}
               </a>
             </div>
           </div>
@@ -802,6 +898,7 @@ export default function Page() {
           autoComplete="name"
           value={form.name}
           onChange={onField("name")}
+          disabled={sending}
         />
         <span className="fld__err">
           Add your name so I know who I&apos;m replying to.
@@ -817,10 +914,24 @@ export default function Page() {
           autoComplete="email"
           value={form.email}
           onChange={onField("email")}
+          disabled={sending}
         />
         <span className="fld__err">
           Check the email address — it doesn&apos;t look complete.
         </span>
+      </div>
+      <div className={`fld${errors.subject ? " has-error" : ""}`}>
+        <label htmlFor="subject">Subject</label>
+        <input
+          type="text"
+          id="subject"
+          name="subject"
+          placeholder="What's this about?"
+          value={form.subject}
+          onChange={onField("subject")}
+          disabled={sending}
+        />
+        <span className="fld__err">Add a short subject line.</span>
       </div>
       <div className={`fld${errors.message ? " has-error" : ""}`}>
         <label htmlFor="message">Message</label>
@@ -830,12 +941,13 @@ export default function Page() {
           placeholder="A sentence about the project, timeline and what you need."
           value={form.message}
           onChange={onField("message")}
+          disabled={sending}
         />
         <span className="fld__err">Add a short message before sending.</span>
       </div>
       <div className="form__foot">
-        <button type="submit" className="btn btn--primary">
-          Open in mail app
+        <button type="submit" className="btn btn--primary" disabled={sending}>
+          {sending ? "Sending" : "Send Message"}
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -848,12 +960,18 @@ export default function Page() {
           </svg>
         </button>
         <p className="form__note">
-          Your mail app opens with the message ready — nothing is stored on this
-          page.
+          Send me a message directly — I&apos;ll get back to you as soon as
+          possible.
         </p>
       </div>
-      <p className="form__status" role="status" aria-live="polite">
-        {status}
+      <p
+        className={`form__status${
+          status.kind ? ` form__status--${status.kind}` : ""
+        }`}
+        role="status"
+        aria-live="polite"
+      >
+        {status.text}
       </p>
     </form>
         </div>
@@ -863,7 +981,7 @@ export default function Page() {
       {/* ========= FOOTER ========= */}
       <footer className="footer">
         <div className="wrap footer__in">
-          <p className="footer__note">© <span>{year}</span> Syeda Aiman Raza — designed and built in Lahore.</p>
+          <p className="footer__note">© <span>{year}</span> Syeda Aiman Raza</p>
           <ul className="footer__social">
             <li><a href="https://github.com/syedaaimanali77-cyber" target="_blank" rel="noopener noreferrer" aria-label="GitHub"><svg viewBox="0 0 24 24"><path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.92c.58.1.79-.25.79-.56v-2.2c-3.2.7-3.88-1.37-3.88-1.37-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.2 1.77 1.2 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.56-.29-5.25-1.28-5.25-5.7 0-1.26.45-2.29 1.2-3.1-.12-.29-.52-1.46.11-3.05 0 0 .98-.31 3.2 1.18a11.1 11.1 0 0 1 5.82 0c2.22-1.49 3.2-1.18 3.2-1.18.63 1.59.23 2.76.11 3.05.75.81 1.2 1.84 1.2 3.1 0 4.43-2.7 5.4-5.27 5.69.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5z"/></svg></a></li>
             <li><a href="https://www.linkedin.com/in/syeda-aiman-56a4a6387" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><svg viewBox="0 0 24 24"><path d="M20.45 20.45h-3.55v-5.57c0-1.33-.02-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.47-.9 1.63-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.55V9h3.57v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.72v20.55C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.72C24 .77 23.2 0 22.22 0z"/></svg></a></li>
